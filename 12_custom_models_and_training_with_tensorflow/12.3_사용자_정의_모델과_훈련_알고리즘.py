@@ -246,3 +246,142 @@ class HuberMetric(keras.metrics.Mean):
 m = HuberMetric(2.)
 m(tf.constant([[2.]]), tf.constant([[10.]]))
 print(m.result())
+
+keras.backend.clear_session()
+np.random.seed(42)
+tf.random.set_seed(42)
+
+# model = keras.models.Sequential([
+#     keras.layers.Dense(30, activation='selu', kernel_initializer='lecun_normal', input_shape=input_shape),
+#     keras.layers.Dense(1),
+# ])
+#
+# model.compile(loss=keras.losses.Huber(2.), optimizer='nadam', weighted_metrics=[HuberMetric(2.)])
+# sample_weight = np.random.rand(len(y_train))
+#
+# history = model.fit(X_train_scaled.astype(np.float32), y_train.astype(np.float32), epochs=2)
+# print(model.metrics[-1].threshold)
+
+# 사용자 정의 층
+exponential_layer = keras.layers.Lambda(lambda x: tf.exp(x))
+print(exponential_layer([-1., 0., 1.]))
+
+keras.backend.clear_session()
+np.random.seed(42)
+tf.random.set_seed(42)
+
+
+# model = keras.models.Sequential([
+#     keras.layers.Dense(30, activation='relu', input_shape=input_shape),
+#     keras.layers.Dense(1),
+#     exponential_layer
+# ])
+#
+# model.compile(loss='mse', optimizer='sgd')
+# model.fit(X_train_scaled, y_train, epochs=5, validation_data=(X_valid_scaled, y_valid))
+# model.evaluate(X_test_scaled, y_test)
+
+class MyDense(keras.layers.Layer):
+    def __init__(self, units, activation=None, **kwargs):
+        super().__init__(**kwargs)
+        self.units = units
+        self.activation = keras.activations.get(activation)
+
+    def build(self, batch_input_shape):
+        self.kernel = self.add_weight(
+            name='kernel', shape=[batch_input_shape[-1], self.units],
+            initializer='glorot_normal')
+        self.bias = self.add_weight(
+            name='bias', shape=[self.units], initializer='zeros')
+        super().build(batch_input_shape)
+
+    def call(self, X):
+        return self.activation(X @ self.kernel + self.bias)
+
+    def get_output_shape_at(self, batch_input_shape):
+        return tf.TensorShape(batch_input_shape.as_list()[:-1] + [self.units])
+
+    def get_config(self):
+        base_config = super().get_config()
+        return {**base_config, "units": self.units,
+                "activation": keras.activations.serialize(self.activation)}
+
+
+# keras.activations.serialize 란
+print(tf.keras.activations.serialize(tf.keras.activations.sigmoid))
+
+keras.backend.clear_session()
+np.random.seed(42)
+tf.random.set_seed(42)
+
+model = keras.models.Sequential([
+    MyDense(30, activation='relu', input_shape=input_shape),
+    MyDense(1)
+])
+
+model.compile(loss='mse', optimizer='nadam')
+model.fit(X_train_scaled, y_train, epochs=2, validation_data=(X_valid_scaled, y_valid))
+model.evaluate(X_test_scaled, y_test)
+
+model.save("my_model_with_a_custom_layer.h5")
+
+class MyMultiLayer(keras.layers.Layer):
+    def call(self, X):
+        X1, X2 = X
+        print(f"X1.shape: {X1.shape}, X2.shape: {X2.shape}")
+        return X1 + X2, X1 * X2
+
+    def compute_output_shape(self, batch_input_shape):
+        batch_input_shape1, batch_input_shape2 = batch_input_shape
+        return [batch_input_shape1, batch_input_shape2]
+
+inputs1 = keras.layers.Input(shape=[2])
+inputs2 = keras.layers.Input(shape=[2])
+outputs1, outputs2 = MyMultiLayer()((inputs1, inputs2))
+
+def split_data(data):
+    columns_count = data.shape[-1]
+    half = columns_count // 2
+    return data[:, :half], data[:, half:]
+
+X_train_scaled_A, X_train_scaled_B = split_data(X_train_scaled)
+X_valid_scaled_A, X_valid_scaled_B = split_data(X_valid_scaled)
+X_test_scaled_A, X_test_scaled_B = split_data(X_test_scaled)
+
+# 분할된 데이터 크기 출력
+print(X_train_scaled_A.shape, X_train_scaled_B.shape)
+
+outputs1, outputs2 = MyMultiLayer()((X_train_scaled_A, X_train_scaled_B))
+print(outputs1, outputs2)
+
+keras.backend.clear_session()
+np.random.seed(42)
+tf.random.set_seed(42)
+
+# input_A = keras.layers.Input(shape=X_train_scaled_A.shape[-1])
+# input_B = keras.layers.Input(shape=X_train_scaled_B.shape[-1])
+# hidden_A, hidden_B = MyMultiLayer()((input_A, input_B))
+# hidden_A = keras.layers.Dense(30, activation='selu')(hidden_A)
+# hidden_B = keras.layers.Dense(30, activation='selu')(hidden_B)
+# concat = keras.layers.Concatenate()((hidden_A, hidden_B))
+# output = keras.layers.Dense(1)(concat)
+# model = keras.models.Model(inputs=[input_A, input_B], outputs=[output])
+#
+# model.compile(loss='mse', optimizer='nadam')
+# model.fit((X_train_scaled_A, X_train_scaled_B), y_train, epochs=2, validation_data=((X_valid_scaled_A, X_valid_scaled_B), y_valid))
+
+class AddGaussianNoise(keras.layers.Layer):
+    def __init__(self, stddev, **kwargs):
+        super().__init__(**kwargs)
+        self.stddev = stddev
+
+    def call(self, X, training=None):
+        if training:
+            noise = tf.random.normal(tf.shape(X), stddev=self.stddev)
+            return X + noise
+        else:
+            return X
+    def compute_output_shape(self, batch_input_shape):
+        return batch_input_shape
+
+model =
