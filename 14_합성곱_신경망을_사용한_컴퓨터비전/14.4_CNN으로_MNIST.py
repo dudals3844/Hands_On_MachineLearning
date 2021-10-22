@@ -43,3 +43,7 @@ history = model.fit(X_train, y_train, epochs=10, validation_data=(X_valid, y_val
 score = model.evaluate(X_test, y_test)
 X_new = X_test[:10] # 새로운 이미지처럼 사용합니다
 y_pred = model.predict(X_new)
+
+print()
+
+print(X_new.shape)

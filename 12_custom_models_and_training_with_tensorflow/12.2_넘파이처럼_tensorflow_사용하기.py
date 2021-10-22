@@ -1,11 +1,11 @@
 import sys
-
+import os
 assert sys.version_info >= (3, 5)
-
 import sklearn
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
+import matplotlib.pyplot as plt
 
 import os
 
@@ -137,4 +137,6 @@ array = array.write(2, tf.constant([5., 7.]))
 mean, variance = tf.nn.moments(array.stack(), axes=0)
 print(mean)
 print(variance)
+
+
 

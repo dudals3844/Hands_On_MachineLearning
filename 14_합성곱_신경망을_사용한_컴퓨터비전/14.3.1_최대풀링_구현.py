@@ -27,4 +27,5 @@ ax2 = fig.add_subplot(gs[0, 1])
 ax2.set_title("Output", fontsize=14)
 ax2.imshow(output[0])  # 첫 번째 이미지 출력 그리기
 ax2.axis("off")
+plt.savefig('tmp.jpg')
 plt.show()

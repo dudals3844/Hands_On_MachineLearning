@@ -1,0 +1,5 @@
+{
+    "python.pythonPath": "/root/anaconda3/envs/tensorflow_env/bin/python",
+    "python.autoComplete.addBrackets": true,
+    "python.autoComplete.extraPaths": ["/root/anaconda3/envs/tensorflow_env/lib/python3.8/site-packages"]
+}
